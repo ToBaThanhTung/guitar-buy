@@ -32,11 +32,12 @@ class Home extends Component {
   }
 
   render() {
-
+    console.log(this.state.loading);
+    
     if (this.state.loading === true) return <div> loading </div>
     const { byArrival, bySell } = this.props;
     const {open, msg} = this.props.snackbar;
-    // console.log(byArrival.articles);
+    console.log(this.props.byArrival);
 
     const renderListGuitarByArrival = (
       <Fragment>
@@ -45,7 +46,7 @@ class Home extends Component {
           <Grid item xs={1} md={2}>
           </Grid>
           <Grid item xs={10} md={8} container>
-            {byArrival.articles.map((article, i) => (
+            {byArrival.map((article, i) => (
               <Grid item sm={6} md={4} xs={12} key={i}>
                 <GuitarCard
                   brand={article.brand.name}
@@ -70,7 +71,7 @@ class Home extends Component {
           <Grid item xs={1} md={2}>
           </Grid>
           <Grid item xs={10} md={8} container>
-            {bySell.articles.map((article, i) => (
+            {bySell.map((article, i) => (
               <Grid item sm={6} md={4} xs={12} key={i}>
                 <GuitarCard
                   brand={article.brand.name}
