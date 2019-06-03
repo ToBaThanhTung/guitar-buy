@@ -56,7 +56,8 @@ const descreaseQuantityAction = data => ({
 });
 
 export const registerAction = (userInput) => (dispatch) => {
-
+  console.log(userInput);
+  
   dispatch(requestPost(userInput));
 
   axios
@@ -78,7 +79,7 @@ export const loginAction = (userInput) => async (dispatch) => {
   await axios
     .post(`${USER_SERVER}/login`, userInput, { withCredentials: true })
     .then(res => {
-      // console.log(res.data);
+      console.log(res.data);
       dispatch(receivePost(res.data));
     })
     .catch(err => console.log(err));
@@ -152,7 +153,7 @@ export const decreaseQuantity = (id) => async (dispatch, getState) => {
       let article = getState().user.cartDetail;
       console.log(article)
       article.forEach(item => {
-        if (item._id == id) {
+        if (item._id == id && item.quantity >= 2) {
           item.quantity -= 1;
         }
       });
@@ -175,7 +176,7 @@ export const getCartItems = (cartItems, userCart) => async dispatch => {
   await axios
     .get(request, { withCredentials: true })
     .then(res => {
-      let article = res.data.article;
+      let article = res.data;
 
       userCart.forEach(item => {
         article.forEach((k, indx) => {

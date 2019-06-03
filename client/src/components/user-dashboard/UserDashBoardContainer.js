@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import Paper from '@material-ui/core/Paper';
 import { MenuList, Typography, MenuItem } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
-
+import UserDashBoardComponent from './UserDashBoardComponent';
 // Icon
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import AccountIcon from '@material-ui/icons/AccountCircle';
@@ -42,7 +42,6 @@ const styles = theme => ({
 const UserLayout = (props) => {
 
   const { classes } = props;
-
 
 
   const renderAdmin = (
@@ -114,7 +113,7 @@ const UserLayout = (props) => {
 
 
         <Grid item xs={6} md={6} >
-          {props.children}
+          <UserDashBoardComponent initUser={props.user}/>
         </Grid>
         <Grid item xs md={2}></Grid>
       </Grid>

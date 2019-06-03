@@ -22,7 +22,7 @@ const styles = theme => ({
 });
 const UserDashBoardComponent = (props) => {
   const { classes, initUser, onChange } = props;
-
+  console.log(initUser)
 
   return (
     <div>

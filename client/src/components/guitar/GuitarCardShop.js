@@ -15,6 +15,7 @@ const GuitarCardShop = (props) => {
           name={card.name}
           price={card.price}
           brand={card.brand.name}
+          images={card.images[0]}
         />
       </Grid>
     )))

@@ -65,7 +65,7 @@ class UserMenu extends Component {
   render() {
     const { user, classes } = this.props;
     const { anchorEl, openAcountMenu, openMoreMenu } = this.state;
-
+    console.log(user)
     let cartBadge = 0;
     // FIX LATER
     if (user.cart) {

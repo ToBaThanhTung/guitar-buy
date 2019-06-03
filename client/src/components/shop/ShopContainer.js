@@ -134,7 +134,7 @@ class Shop extends Component {
 
             </Grid>
             <Grid item xs={6} md={6}>
-                <LoadMoreGuitar
+              <LoadMoreGuitar
                 products={this.props.products.toShop}
                 size={this.props.products.toShopSize}
                 limit={this.state.limit}

@@ -1,9 +1,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser'); 
+const cookieParser = require('cookie-parser');
 const formidable = require('express-formidable');
 const cloudinary = require('cloudinary');
-
+const morgan = require('morgan');
 const app = express();
 const mongoose = require('mongoose');
 const async = require('async');
@@ -11,17 +11,32 @@ var cors = require('cors')
 require('dotenv').config();
 
 mongoose.Promise = global.Promise;
-mongoose.connect(process.env.DATABASE, {useNewUrlParser: true, useCreateIndex: true})
+mongoose.connect(process.env.DATABASE, { 
+    useNewUrlParser: true,
+    useCreateIndex: true,
+    useFindAndModify: false,
+})
 // mongoose.connect('mongodb://localhost:27017/myapp', {useNewUrlParser: true});
 
-app.use(bodyParser.urlencoded({extended:true}));
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cookieParser());
-app.use(cors({credentials: true, origin: 'http://localhost:3000'}));
+app.use(morgan('dev', {
+    skip: function (req, res) {
+        return res.statusCode < 400
+    }, stream: process.stderr
+}));
+
+app.use(morgan('dev', {
+    skip: function (req, res) {
+        return res.statusCode >= 400
+    }, stream: process.stdout
+}));
+app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
 cloudinary.config({
     cloud_name: process.env.CLOUD_NAME,
     api_key: process.env.CLOUD_API_KEY,
-    api_secret: process.env.CLOUD_API_SECRET    
+    api_secret: process.env.CLOUD_API_SECRET
 })
 
 // Models
@@ -40,22 +55,22 @@ const { admin } = require('./middleware/admin');
 //             PRODUCTS
 //=================================
 
-app.post('/api/product/shop',(req,res)=>{
+app.post('/api/product/shop', (req, res) => {
 
     let order = req.body.order ? req.body.order : "desc";
     let sortBy = req.body.sortBy ? req.body.sortBy : "_id";
-    let limit = req.body.limit ? parseInt(req.body.limit) : 100; 
+    let limit = req.body.limit ? parseInt(req.body.limit) : 100;
     let skip = parseInt(req.body.skip);
     let findArgs = {};
 
-    for(let key in req.body.filters){
-        if(req.body.filters[key].length >0 ){
-            if(key === 'price'){
+    for (let key in req.body.filters) {
+        if (req.body.filters[key].length > 0) {
+            if (key === 'price') {
                 findArgs[key] = {
                     $gte: req.body.filters[key][0],
                     $lte: req.body.filters[key][1]
                 }
-            }else{
+            } else {
                 findArgs[key] = req.body.filters[key]
             }
         }
@@ -64,19 +79,19 @@ app.post('/api/product/shop',(req,res)=>{
     findArgs['publish'] = true;
 
     Product.
-    find(findArgs).
-    populate('brand').
-    populate('wood').
-    sort([[sortBy,order]]).
-    skip(skip).
-    limit(limit).
-    exec((err,articles)=>{
-        if(err) return res.status(400).send(err);
-        res.status(200).json({
-            size: articles.length,
-            articles
+        find(findArgs).
+        populate('brand').
+        populate('wood').
+        sort([[sortBy, order]]).
+        skip(skip).
+        limit(limit).
+        exec((err, articles) => {
+            if (err) return res.status(400).send(err);
+            res.status(200).json({
+                size: articles.length,
+                articles
+            })
         })
-    })
 })
 
 // BY ARRIVAL
@@ -84,53 +99,53 @@ app.post('/api/product/shop',(req,res)=>{
 
 // BY SELL
 // /articles?sortBy=sold&order=desc&limit=100
-app.get('/api/product/articles',(req,res)=>{
+app.get('/api/product/articles', (req, res) => {
 
     let order = req.query.order ? req.query.order : 'asc';
     let sortBy = req.query.sortBy ? req.query.sortBy : "_id";
     let limit = req.query.limit ? parseInt(req.query.limit) : 100;
 
     Product.
-    find().
-    populate('brand').
-    populate('wood').
-    sort([[sortBy,order]]).
-    limit(limit).
-    exec((err,articles)=>{
-        if(err) return res.status(400).send(err);
-        res.send(articles)
-    })
+        find().
+        populate('brand').
+        populate('wood').
+        sort([[sortBy, order]]).
+        limit(limit).
+        exec((err, articles) => {
+            if (err) return res.status(400).send(err);
+            res.send(articles)
+        })
 })
 
 
 /// /api/product/article?id=HSHSHSKSK,JSJSJSJS,SDSDHHSHDS,JSJJSDJ&type=single
-app.get('/api/product/articles_by_id',(req,res)=>{
+app.get('/api/product/articles_by_id', (req, res) => {
     let type = req.query.type;
     let items = req.query.id;
 
-    if(type === "array"){
+    if (type === "array") {
         let ids = req.query.id.split(',');
         items = [];
-        items = ids.map(item=>{
+        items = ids.map(item => {
             return mongoose.Types.ObjectId(item)
         })
     }
 
     Product.
-    find({ '_id':{$in:items}}).
-    populate('brand').
-    populate('wood').
-    exec((err,docs)=>{
-        return res.status(200).send(docs)
-    })
+        find({ '_id': { $in: items } }).
+        populate('brand').
+        populate('wood').
+        exec((err, docs) => {
+            return res.status(200).send(docs)
+        })
 });
 
 
-app.post('/api/product/article',auth,admin,(req,res)=>{
+app.post('/api/product/article', auth, admin, (req, res) => {
     const product = new Product(req.body);
 
-    product.save((err,doc)=>{
-        if(err) return res.json({success:false,err});
+    product.save((err, doc) => {
+        if (err) return res.json({ success: false, err });
         res.status(200).json({
             success: true,
             article: doc
@@ -142,11 +157,11 @@ app.post('/api/product/article',auth,admin,(req,res)=>{
 //              WOODS
 //=================================
 
-app.post('/api/product/wood',auth,admin,(req,res)=>{
+app.post('/api/product/wood', auth, admin, (req, res) => {
     const wood = new Wood(req.body);
 
-    wood.save((err,doc)=>{
-        if(err) return res.json({success:false,err});
+    wood.save((err, doc) => {
+        if (err) return res.json({ success: false, err });
         res.status(200).json({
             success: true,
             wood: doc
@@ -154,9 +169,9 @@ app.post('/api/product/wood',auth,admin,(req,res)=>{
     })
 });
 
-app.get('/api/product/woods',(req,res)=>{
-    Wood.find({},(err,woods)=>{
-        if(err) return res.status(400).send(err);
+app.get('/api/product/woods', (req, res) => {
+    Wood.find({}, (err, woods) => {
+        if (err) return res.status(400).send(err);
         res.status(200).send(woods)
     })
 })
@@ -166,21 +181,21 @@ app.get('/api/product/woods',(req,res)=>{
 //              BRAND
 //=================================
 
-app.post('/api/product/brand',auth,admin,(req,res)=>{
+app.post('/api/product/brand', auth, admin, (req, res) => {
     const brand = new Brand(req.body);
 
-    brand.save((err,doc)=>{
-        if(err) return res.json({success:false,err});
+    brand.save((err, doc) => {
+        if (err) return res.json({ success: false, err });
         res.status(200).json({
-            success:true,
+            success: true,
             brand: doc
         })
     })
 })
 
-app.get('/api/product/brands',(req,res)=>{
-    Brand.find({},(err,brands)=>{
-        if(err) return res.status(400).send(err);
+app.get('/api/product/brands', (req, res) => {
+    Brand.find({}, (err, brands) => {
+        if (err) return res.status(400).send(err);
         res.status(200).send(brands)
     })
 })
@@ -190,40 +205,40 @@ app.get('/api/product/brands',(req,res)=>{
 //              USERS
 //=================================
 
-app.get('/api/users/auth',auth,(req,res)=>{
-        res.status(200).json({
-            isAdmin: req.user.role === 0 ? false : true,
-            isAuth: true,
-            email: req.user.email,
-            name: req.user.name,
-            lastname: req.user.lastname,
-            role: req.user.role,
-            cart: req.user.cart,
-            history: req.user.history
-        })
+app.get('/api/users/auth', auth, (req, res) => {
+    res.status(200).json({
+        isAdmin: req.user.role === 0 ? false : true,
+        isAuth: true,
+        email: req.user.email,
+        firstName: req.user.firstName,
+        lastName: req.user.lastName,
+        role: req.user.role,
+        cart: req.user.cart,
+        history: req.user.history
+    })
 })
 
-app.post('/api/users/register',(req,res)=>{
+app.post('/api/users/register', (req, res) => {
     const user = new User(req.body);
-
-    user.save((err,doc)=>{
-        if(err) return res.json({success:false,err});
+    console.log(user)
+    user.save((err, doc) => {
+        if (err) return res.json({ success: false, err });
         res.status(200).json({
             success: true
         })
     })
 });
 
-app.post('/api/users/login',(req,res)=>{
-    User.findOne({'email':req.body.email},(err,user)=>{
-        if(!user) return res.json({loginSuccess:false,message:'Auth failed, email not found'});
+app.post('/api/users/login', (req, res) => {
+    User.findOne({ 'email': req.body.email }, (err, user) => {
+        if (!user) return res.json({ loginSuccess: false, message: 'Auth failed, email not found' });
 
-        user.comparePassword(req.body.password,(err,isMatch)=>{
-            if(!isMatch) return res.json({loginSuccess:false,message:'Wrong password'});
+        user.comparePassword(req.body.password, (err, isMatch) => {
+            if (!isMatch) return res.json({ loginSuccess: false, message: 'Wrong password' });
 
-            user.generateToken((err,user)=>{
-                if(err) return res.status(400).send(err);
-                res.cookie('w_auth',user.token).status(200).json({
+            user.generateToken((err, user) => {
+                if (err) return res.status(400).send(err);
+                res.cookie('w_auth', user.token).status(200).json({
                     loginSuccess: true
                 })
             })
@@ -232,12 +247,12 @@ app.post('/api/users/login',(req,res)=>{
 })
 
 
-app.get('/api/users/logout',auth,(req,res)=>{
+app.get('/api/users/logout', auth, (req, res) => {
     User.findOneAndUpdate(
-        { _id:req.user._id },
+        { _id: req.user._id },
         { token: '' },
-        (err,doc)=>{
-            if(err) return res.json({success:false,err});
+        (err, doc) => {
+            if (err) return res.json({ success: false, err });
             return res.status(200).send({
                 success: true
             })
@@ -245,61 +260,65 @@ app.get('/api/users/logout',auth,(req,res)=>{
     )
 });
 
-app.post('/api/users/uploadimage',auth,admin,formidable(),(req,res)=>{
-    cloudinary.uploader.upload(req.files.file.path,(result)=>{
+app.post('/api/users/uploadimage', auth, admin, formidable(), (req, res) => {
+    cloudinary.uploader.upload(req.files.file.path, (result) => {
         console.log(result);
         res.status(200).send({
             public_id: result.public_id,
             url: result.url
         })
-    },{
-        public_id: `${Date.now()}`,
-        resource_type: 'auto'
-    })
+    }, {
+            public_id: `${Date.now()}`,
+            resource_type: 'auto'
+        })
 })
 
-app.get('/api/users/removeimage',auth,admin,(req,res)=>{
+app.get('/api/users/removeimage', auth, admin, (req, res) => {
     let image_id = req.query.public_id;
 
-    cloudinary.uploader.destroy(image_id,(error,result)=>{
-        if(error) return res.json({succes:false,error});
+    cloudinary.uploader.destroy(image_id, (error, result) => {
+        if (error) return res.json({ succes: false, error });
         res.status(200).send('ok');
     })
 })
 
 
-app.post('/api/users/addToCart',auth,(req,res)=>{
+app.post('/api/users/addToCart', auth, (req, res) => {
 
-    User.findOne({_id: req.user._id},(err,doc)=>{
+    User.findOne({ _id: req.user._id }, (err, doc) => {
         let duplicate = false;
 
-        doc.cart.forEach((item)=>{
-            if(item.id == req.query.productId){
-                  duplicate = true;  
+        doc.cart.forEach((item) => {
+            if (item.id == req.query.productId) {
+                duplicate = true;
             }
         })
 
-        if(duplicate){
+        if (duplicate) {
             User.findOneAndUpdate(
-                {_id: req.user._id, "cart.id":mongoose.Types.ObjectId(req.query.productId)},
-                { $inc: { "cart.$.quantity":1 } },
-                { new:true },
-                ()=>{
-                    if(err) return res.json({success:false,err});
+                { _id: req.user._id, "cart.id": mongoose.Types.ObjectId(req.query.productId) },
+                { $inc: { "cart.$.quantity": 1 } },
+                { new: true },
+                () => {
+                    if (err) return res.json({ success: false, err });
                     res.status(200).json(doc.cart)
                 }
             )
         } else {
             User.findOneAndUpdate(
-                {_id: req.user._id},
-                { $push:{ cart:{
-                    id: mongoose.Types.ObjectId(req.query.productId),
-                    quantity:1,
-                    date: Date.now()
-                } }},
+                { _id: req.user._id },
+                {
+                    $push: {
+                        cart: {
+                            id: mongoose.Types.ObjectId(req.query.productId),
+                            quantity: 1,
+                            date: Date.now()
+                        }
+                    }
+                },
                 { new: true },
-                (err,doc)=>{
-                    if(err) return res.json({success:false,err});
+                (err, doc) => {
+                    if (err) return res.json({ success: false, err });
                     res.status(200).json(doc.cart)
                 }
             )
@@ -307,41 +326,71 @@ app.post('/api/users/addToCart',auth,(req,res)=>{
     })
 });
 
+app.post('/api/users/increaseQuantity', auth, (req, res) => {
+    User.findOne({ _id: req.user._id }, (err, doc) => {
+        User.findOneAndUpdate(
+            { _id: req.user._id, "cart.id": mongoose.Types.ObjectId(req.query.productId) },
+            { $inc: { "cart.$.quantity": 1 } },
+            { new: true },
+            () => {
+                if (err) return res.json({ increaseSuccess: false, err });
+                res.status(200).json(doc.cart)
+            }
+        )
+    })
+})
 
-app.get('/api/users/removeFromCart',auth,(req,res)=>{
+
+app.post('/api/users/decreaseQuantity', auth, (req, res) => {
+    User.findOne({ _id: req.user._id }, (err, doc) => {
+        User.findOneAndUpdate(
+            { _id: req.user._id, "cart.id": mongoose.Types.ObjectId(req.query.productId) },
+            { $inc: { "cart.$.quantity": -1 } },
+            { new: true },
+            () => {
+                if (err) return res.json({ decreaseSuccess: false, err });
+                res.status(200).json(doc.cart)
+            }
+        )
+    })
+})
+
+
+app.get('/api/users/removeFromCart', auth, (req, res) => {
 
     User.findOneAndUpdate(
-        {_id: req.user._id },
-        { "$pull":
-            { "cart": {"id":mongoose.Types.ObjectId(req.query._id)} }
+        { _id: req.user._id },
+        {
+            "$pull":
+                { "cart": { "id": mongoose.Types.ObjectId(req.query._id) } }
         },
         { new: true },
-        (err,doc)=>{
+        (err, doc) => {
             let cart = doc.cart;
-            let array = cart.map(item=>{
+            let array = cart.map(item => {
                 return mongoose.Types.ObjectId(item.id)
             });
 
             Product.
-            find({'_id':{ $in: array }}).
-            populate('brand').
-            populate('wood').
-            exec((err,cartDetail)=>{
-                return res.status(200).json({
-                    cartDetail,
-                    cart
+                find({ '_id': { $in: array } }).
+                populate('brand').
+                populate('wood').
+                exec((err, cartDetail) => {
+                    return res.status(200).json({
+                        cartDetail,
+                        cart
+                    })
                 })
-            })
         }
     );
 })
 
-app.post('/api/users/successBuy',auth,(req,res)=>{
+app.post('/api/users/successBuy', auth, (req, res) => {
     let history = [];
     let transactionData = {}
 
     // user history
-    req.body.cartDetail.forEach((item)=>{
+    req.body.cartDetail.forEach((item) => {
         history.push({
             dateOfPurchase: Date.now(),
             name: item.name,
@@ -362,37 +411,39 @@ app.post('/api/users/successBuy',auth,(req,res)=>{
     }
     transactionData.data = req.body.paymentData;
     transactionData.product = history;
-        
+
     User.findOneAndUpdate(
         { _id: req.user._id },
-        { $push:{ history:history }, $set:{ cart:[] } },
+        { $push: { history: history }, $set: { cart: [] } },
         { new: true },
-        (err,user)=>{
-            if(err) return res.json({success:false,err});
+        (err, user) => {
+            if (err) return res.json({ success: false, err });
 
             const payment = new Payment(transactionData);
-            payment.save((err,doc)=>{
-                if(err) return res.json({success:false,err});
+            payment.save((err, doc) => {
+                if (err) return res.json({ success: false, err });
                 let products = [];
-                doc.product.forEach(item=>{
-                    products.push({id:item.id,quantity:item.quantity})
-                 })
-              
-                async.eachSeries(products,(item,callback)=>{ 
+                doc.product.forEach(item => {
+                    products.push({ id: item.id, quantity: item.quantity })
+                })
+
+                async.eachSeries(products, (item, callback) => {
                     Product.update(
-                        {_id: item.id},
-                        { $inc:{
-                            "sold": item.quantity
-                        }},
-                        {new:false},
+                        { _id: item.id },
+                        {
+                            $inc: {
+                                "sold": item.quantity
+                            }
+                        },
+                        { new: false },
                         callback
                     )
-                },(err)=>{
-                    if(err) return res.json({success:false,err})
+                }, (err) => {
+                    if (err) return res.json({ success: false, err })
                     res.status(200).json({
-                        success:true,
+                        success: true,
                         cart: user.cart,
-                        cartDetail:[]
+                        cartDetail: []
                     })
                 })
             });
@@ -402,6 +453,6 @@ app.post('/api/users/successBuy',auth,(req,res)=>{
 
 
 const port = process.env.PORT || 5000;
-app.listen(port,()=>{
+app.listen(port, () => {
     console.log(`Server Running at ${port}`)
 })

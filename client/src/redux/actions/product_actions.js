@@ -93,9 +93,9 @@ export const getProductsByArrival = () => async dispatch => {
 export const getBrands = () => async dispatch => {
   dispatch(requestGET());
   await axios
-    .get(`${PRODUCT_SERVER}brand/`)
+    .get(`${PRODUCT_SERVER}brands/`)
     .then(res => {
-      dispatch(getBrandsAction(res.data.brands));
+      dispatch(getBrandsAction(res.data));
     })
 };
 
@@ -151,9 +151,9 @@ export const addWoods = (existingWoods, newWoodsName) => async dispatch => {
 export const getWoods = () => async dispatch => {
   dispatch(requestGET());
   await axios
-    .get(`${PRODUCT_SERVER}wood`)
+    .get(`${PRODUCT_SERVER}woods`)
     .then(res => {
-      dispatch(getWoodsAction(res.data.woods));
+      dispatch(getWoodsAction(res.data));
     })
 };
 
@@ -215,10 +215,10 @@ export const getProductDetail = (id, cb)=> async dispatch => {
       .get(`${PRODUCT_SERVER}articles_by_id?id=${id}&type=single`)
       .then(res => {
         // console.log(res.data.article[0]);
-        if(!res.data.article) {
+        if(!res.data) {
           return cb(notFoundId => notFoundId ===  true)
         }
-        const payload = res.data.article[0];
+        const payload = res.data[0];
         dispatch(getProductDetailAction(payload));
       });
   } catch(err) {
